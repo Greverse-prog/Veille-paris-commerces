@@ -21,7 +21,7 @@ jobs:
           python-version: "3.12"
 
       - name: Lancer la veille
-        run: python3 veille_paris_commerces.py
+        run: python3 -u veille_paris_commerces.py
 
       - name: Enregistrer les résultats dans le dépôt
         run: |
