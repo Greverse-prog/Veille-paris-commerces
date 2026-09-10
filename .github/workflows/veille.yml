@@ -1,28 +1,29 @@
-name: Veille commerces Paris
 
+name: Veille commerces Paris
+ 
 on:
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch: {}
-
+ 
 permissions:
   contents: write
-
+ 
 jobs:
   veille:
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v7
+ 
       - name: Installer Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-
+ 
       - name: Lancer la veille
         run: python3 -u veille_paris_commerces.py
-
+ 
       - name: Enregistrer les résultats dans le dépôt
         run: |
           git config user.name "github-actions[bot]"
@@ -34,3 +35,4 @@ jobs:
           else
             echo "Rien de nouveau à committer."
           fi
+ 
