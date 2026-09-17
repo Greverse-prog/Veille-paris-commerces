@@ -53,8 +53,8 @@ NAF_CODES = {
     "10.71C": "Boulangerie-pâtisserie",
 }
 
-# Arrondissements de Paris à surveiller (ici : 17ème et 18ème uniquement)
-CODES_POSTAUX = ["75017", "75018"]
+# Arrondissements de Paris à surveiller (75001 à 75020)
+CODES_POSTAUX = [f"750{str(i).zfill(2)}" for i in range(1, 21)]
 
 # Ne garder que les établissements créés dans les N derniers jours
 FENETRE_JOURS = 30
@@ -84,7 +84,7 @@ MAX_TENTATIVES = 3
 def interroger_api(code_naf: str, code_postal: str, page: int = 1) -> dict:
     """Appelle l'API Recherche d'entreprises, avec tentatives automatiques en cas d'erreur."""
     params = {
-        "activite_principale": code_naf,
+        "code_naf": code_naf,
         "code_postal": code_postal,
         "per_page": 25,
         "page": page,
@@ -98,7 +98,7 @@ def interroger_api(code_naf: str, code_postal: str, page: int = 1) -> dict:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             if e.code == 429:  # trop de requêtes : on patiente plus longtemps
-                attente = 15 * tentative
+                attente = 5 * tentative
                 print(f"  Rate limit atteint, pause de {attente}s...")
                 time.sleep(attente)
             elif tentative == MAX_TENTATIVES:
@@ -127,7 +127,7 @@ def toutes_les_pages(code_naf: str, code_postal: str):
         if page >= total_pages:
             return
         page += 1
-        time.sleep(1.5)
+        time.sleep(0.3)
 
 
 def charger_vus() -> set:
@@ -214,7 +214,6 @@ def main() -> None:
             except Exception as e:
                 print(f"  Erreur API ({code_naf}, {code_postal}) : {e}")
                 continue
-            time.sleep(1.5)
 
     # Les créations les plus récentes en premier
     nouveautes.sort(key=lambda n: n.get("date_creation") or "", reverse=True)
