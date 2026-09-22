@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 r"""
-Veille automatisée des créations de coffee shops, restaurants et boulangeries à Paris.
+Veille automatisée des créations de coffee shops et restaurants à Paris (17e et 18e).
 
 Source de données : API Recherche d'entreprises (recherche-entreprises.api.gouv.fr)
 - API officielle, publique, gratuite, sans clé d'accès requise.
@@ -25,9 +25,8 @@ B) Avec le Planificateur de tâches Windows :
 
 C) Gratuitement dans le cloud avec GitHub Actions (recommandé si tu veux zéro maintenance) :
    - Crée un dépôt GitHub privé, mets-y ce script.
-   - Ajoute un fichier .github/workflows/veille.yml (je peux te le générer si tu veux)
-     qui lance le script tous les jours et commit le résultat, ou envoie un email
-     via une Action dédiée.
+   - Ajoute un fichier .github/workflows/veille.yml qui lance le script tous les
+     jours et commit le résultat, ou envoie un email via une Action dédiée.
 
 Dépendances : aucune (uniquement la bibliothèque standard Python 3).
 """
@@ -53,7 +52,7 @@ NAF_CODES = {
     "10.71C": "Boulangerie-pâtisserie",
 }
 
-# Arrondissements de Paris à surveiller (75001 à 75020)
+# Arrondissements de Paris à surveiller (75001 à 75020, Paris entier)
 CODES_POSTAUX = [f"750{str(i).zfill(2)}" for i in range(1, 21)]
 
 # Ne garder que les établissements créés dans les N derniers jours
@@ -84,7 +83,10 @@ MAX_TENTATIVES = 3
 def interroger_api(code_naf: str, code_postal: str, page: int = 1) -> dict:
     """Appelle l'API Recherche d'entreprises, avec tentatives automatiques en cas d'erreur."""
     params = {
-        "code_naf": code_naf,
+        # IMPORTANT : le paramètre s'appelle "activite_principale", pas "code_naf".
+        # Un paramètre inconnu est ignoré silencieusement par l'API, ce qui désactive
+        # le filtre par activité (c'est ce qui causait les résultats hors-sujet).
+        "activite_principale": code_naf,
         "code_postal": code_postal,
         "per_page": 25,
         "page": page,
@@ -98,7 +100,7 @@ def interroger_api(code_naf: str, code_postal: str, page: int = 1) -> dict:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             if e.code == 429:  # trop de requêtes : on patiente plus longtemps
-                attente = 5 * tentative
+                attente = 15 * tentative
                 print(f"  Rate limit atteint, pause de {attente}s...")
                 time.sleep(attente)
             elif tentative == MAX_TENTATIVES:
@@ -127,7 +129,7 @@ def toutes_les_pages(code_naf: str, code_postal: str):
         if page >= total_pages:
             return
         page += 1
-        time.sleep(0.3)
+        time.sleep(1.5)
 
 
 def charger_vus() -> set:
@@ -214,6 +216,7 @@ def main() -> None:
             except Exception as e:
                 print(f"  Erreur API ({code_naf}, {code_postal}) : {e}")
                 continue
+            time.sleep(1.5)
 
     # Les créations les plus récentes en premier
     nouveautes.sort(key=lambda n: n.get("date_creation") or "", reverse=True)
